@@ -145,8 +145,7 @@ job* getJobBG(int jobID){
 }
 //doesn't make job run just adds to list
 
-void addJobFG(int jobID, int pid, char* status, char* cmd, job* nextJob, int bg){
-    job* newJob = makeJob(jobID, pid, status, cmd, nextJob, bg);
+void addJobFG(job* newJob){
     if(jobsFG.head != NULL){
         printf("Job error!\n");
     } else {
@@ -162,36 +161,34 @@ void addJobFG(int jobID, int pid, char* status, char* cmd, job* nextJob, int bg)
     return;
 }
 
-void addJobBG(int jobID, int pid, char* status, char* cmd, job* nextJob, int bg){
-    job* newJob = makeJob(jobID, pid, status, cmd, nextJob, bg);
+void addJobBG(job** newJob){
     printf("The pid of the current process is %d\n", getpid());
-
     job* tempJob = jobsBG.head;
     job* beforeTemp = NULL;
     if(jobsBG.head != NULL && jobsBG.head->cmdline != NULL){
         //if its a new job and the list is not empty
         if(newJob->jobID < 1){
-            jobsBG.tail->nextJob = newJob;
-            newJob->jobID = (jobsBG.tail->jobID) + 1;
+            jobsBG.tail->nextJob = *newJob;
+            (*newJob)->jobID = (jobsBG.tail->jobID) + 1;
             jobsBG.tail = jobsBG.tail->nextJob;
         } else {
             //it is not a new job and list is not empty
             //even if head of list has equal jobID we insert after
-            while(tempJob->jobID >= newJob->jobID){
+            while(tempJob->jobID >= (*newJob)->jobID){
                 beforeTemp = tempJob;
                 tempJob = tempJob->nextJob;
             }
-                beforeTemp->nextJob = newJob;
-                newJob->nextJob = tempJob;
+                beforeTemp->nextJob = *newJob;
+                (*newJob)->nextJob = tempJob;
                 if(tempJob == NULL){
                     jobsBG.tail = tempJob;
                 }
         }
     } else {
         //list is empty
-        jobsBG.head = newJob;
-        jobsBG.tail = newJob;
-        newJob->jobID = 1;
+        jobsBG.head = *newJob;
+        jobsBG.tail = *newJob;
+        (*newJob)->jobID = 1;
     }
     jobsBG.numJobs++;
     jobsBG.numJobsRunning++;
@@ -214,56 +211,43 @@ int deleteJobFG(int jobID){
     }
 }
 
-int deleteJobBG(job** deleteJob, job** beforeDelete, int jobID){  
+int deleteJobBG(int jobID){  
+    job* deleteJob = jobsBG.head;
+    job* beforeDelete = jobsBG.head;
+
     if(*deleteJob != NULL){
         //if job is head
-        if(jobID == (*deleteJob)->jobID){
-            if((*deleteJob)->nextJob != NULL){
-                job* alias = jobsBG.head->nextJob;
-                *beforeDelete = makeJob(alias->jobID,alias->processID, alias->status,alias->cmdline,alias->nextJob,alias->bgIndicator);
-                jobsBG.head = *beforeDelete;
+        if(jobID == deleteJob->jobID){
+            if(deleteJob->nextJob != NULL){             
+                jobsBG.head = jobsBG.head->nextJob;
             } else {
                 jobsBG.head = NULL;
                 jobsBG.tail = NULL;
             }
-            free((*deleteJob)->status);
-            free((*deleteJob)->cmdline);
-            free((*deleteJob)->nextJob);
-            free(*deleteJob);
+            free(deleteJob->status);
+            free(deleteJob->cmdline);
+            free(deleteJob->nextJob);
+            free(deleteJob);
         } else {
-            while((*deleteJob)->jobID != jobID){
-                    printf("Job is: %d\n", (*deleteJob)->jobID);
-                    *beforeDelete = *deleteJob;
-                    *deleteJob = (*deleteJob)->nextJob;
-                    if(*deleteJob == NULL){
+            while(deleteJob->jobID != jobID){
+                    printf("Job is: %d\n", deleteJob->jobID);
+                    beforeDelete = deleteJob;
+                    deleteJob = deleteJob->nextJob;
+                    if(deleteJob == NULL){
                         printf("Job not found!\n");
                         return -1;
                     }
             }
-           //if job is tail
-            if((*deleteJob)->processID == jobsBG.tail->processID){
-                free((*deleteJob)->status);
-                free((*deleteJob)->cmdline);
-                free((*deleteJob)->nextJob);
-                free(*deleteJob);
-                (*beforeDelete)->nextJob = NULL;
-                jobsBG.tail = *beforeDelete;
-            } else {
+
                 //if job is intermediate node
-                if((*deleteJob)->nextJob != NULL && (*deleteJob)->nextJob->cmdline != NULL){
-                    job* alias = (*deleteJob)->nextJob;
-                    printf("Alias process id is %d\n", alias->processID);
-                     (*beforeDelete)->nextJob = makeJob(alias->jobID, alias->processID, alias->status,alias->cmdline,alias->nextJob,alias->bgIndicator);
-                    printf("Alias process id is %d\n", alias->processID);
-
-                    free((*deleteJob)->status);
-                    free((*deleteJob)->cmdline);
-                    (*deleteJob)->nextJob = NULL;
-                    free(*deleteJob);
-                     printf("Alias process id is %d\n", alias->processID);
-
-                }    
-            }
+                if(deleteJob->nextJob != NULL && deleteJob->nextJob->cmdline != NULL){
+                    beforeDelete->nextJob = deleteJob->nextJob;
+                } else if(deleteJob->processID == jobsBG.tail->processID){
+                    jobsBG.tail->beforeDelete;
+                }
+                    free(deleteJob->status);
+                    free(deleteJob->cmdline);
+                    free(deleteJob);
         }
 
         (jobsBG.numJobs)--;
@@ -320,7 +304,7 @@ void child_handler(int sig){
 
 
 
-void fg(jobList* jobsBG, jobList* jobsFG, int jobID, char* jobIDMove){
+void fg(int jobID, char* jobIDMove){
  //move job in arg[1] to foreground
          
             printf("fg!\n");
@@ -335,7 +319,8 @@ void fg(jobList* jobsBG, jobList* jobsFG, int jobID, char* jobIDMove){
             job* jobBG = getJobBG(jobID);
             if(jobBG != NULL){
                 jobBG->bgIndicator = 0;
-                addJobFG(jobBG->jobID, jobBG->processID, jobBG->status, jobBG->cmdline, jobBG->nextJob, jobBG->bgIndicator);
+                job* newJob = makeJob(jobBG->jobID, jobBG->processID, jobBG->status, jobBG->cmdline, jobBG->nextJob, jobBG->bgIndicator);
+                addJobFG(newJob);
                 // deleteJobBG(jobID);
                 //strcopy(newJob->status, "Running");
                 if(kill(jobBG->processID, SIGCONT) == -1){
@@ -353,7 +338,7 @@ void fg(jobList* jobsBG, jobList* jobsFG, int jobID, char* jobIDMove){
     return;
 }
 
-void bg(jobList* jobsBG, char* jobID){
+void bg(char* jobID){
     int jobNum = 0;
     if(jobID != NULL){
         jobNum = atoi(jobID);
@@ -550,18 +535,16 @@ int main(){
     
     //job* deleteJob = makeJob(jobsBG.head->jobID, jobsBG.head->processID, jobsBG.head->status, jobsBG.head->cmdline, jobsBG.head->nextJob, jobsBG.head->bgIndicator);
     //job* beforeDelete = makeJob(jobsBG.head->jobID, jobsBG.head->processID, jobsBG.head->status, jobsBG.head->cmdline, jobsBG.head->nextJob, jobsBG.head->bgIndicator);
-   job* deleteJob = jobsBG.head;
-    job* beforeDelete = jobsBG.head;
-
-
+   job* newJob = makeJob(-1, 1234, "Running", "sleep 100", NULL, 1);
+    addJobBG(&newJob);
     printJobs();
-    addJobBG(-1, 1234, "Running", "sleep 100", NULL, 1);
-    printJobs();
-    addJobFG(-1, 5678, "Running", "fg", NULL, 0);
+    newJob = makeJob(-1, 5678, "Running", "fg", NULL, 0);
+    addJob(newJob);
     printf("\n");
     printJobs();
     printf("Foreground head command is NOW %s\n", jobsFG.head->cmdline);
-    addJobFG(-1, 2231, "Running", "blah blah", NULL, 0);
+    newJob = makeJob(-1, 2231, "Running", "blah blah", NULL, 0);
+    addJobFG(newJob);
     printf("Trying to add another job to the foreground\n");
     printf("\n");
     printJobs();
@@ -570,21 +553,20 @@ int main(){
     deleteJobFG(0);
     printJobs();
 
-    addJobBG(-1, 45123, "Running", "ls -l", NULL, 1);
+    newJob = makeJob(-1, 45123, "Running", "ls -l", NULL, 1);
+    addJobBG(newJob);
     printJobs();
 
-    addJobBG(-1, 123123, "Running", "does this work", NULL, 1);
+    newJob = makeJob(-1, 123123, "Running", "does this work", NULL, 1);
+    addJobBG(newJob);
     printJobs();
     //addJobFG(3, 123123, "Running", "does this work", NULL, 1);
     //printJobs();
     printf("\n");
-    deleteJob = jobsBG.head;
-    beforeDelete = jobsBG.head;
-    deleteJobBG(&deleteJob, &beforeDelete, 2);
+
+    deleteJobBG(2);
     printJobs();
-    deleteJob = jobsBG.head;
-    beforeDelete = jobsBG.head;
-    deleteJobBG(&deleteJob, &beforeDelete, 3);
+    deleteJobBG(3);
     printJobs();
     return 0;
 
