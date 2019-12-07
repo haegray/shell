@@ -199,7 +199,6 @@ int deleteJobBG(int jobID){
                 jobsBG.tail = NULL;
             }
             free(deleteJob);
-            *deleteJob = NULL;
         } else {
             while(deleteJob->jobID != jobID){
                     printf("Job is: %d\n", deleteJob->jobID);
@@ -223,7 +222,6 @@ int deleteJobBG(int jobID){
                 free(deleteJob->status);
                 free(deleteJob->cmdline);
                 free(deleteJob);
-                *deleteJob = NULL;
         }
 
         jobsBG.numJobsRunning--;
@@ -254,12 +252,7 @@ void child_handler(int sig){
           }
         }
         job* tempJob = getJob(pidH);
-        if(WIFSTOPPED(child_status)){
-            if(sig == SIGINT){
-                tempJob = getJobFG(tempJob->jobID);
-                kill(tempJob->processID, SIGTERM);
-                printf("Hello\n");
-            }    
+        if(WIFSTOPPED(child_status)){ 
             printf("Mangos\n");
             strcpy(tempJob->status, "Stopped");
             if(sig == SIGTSTP){
@@ -308,7 +301,78 @@ void child_handler(int sig){
 
     }
     printf("Corn\n");
+    /**
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    sigaddset(&set, SIGTSTP);
+    sigprocmask(SIG_UNBLOCK,&set,NULL);
+*/
+}
 
+void int_handler(int sig){
+    int child_status = NULL;
+    pidH = waitpid(-1, &child_status, WUNTRACED);
+    printf("Child status is %d\n pidH is %d\n", child_status, pidH);
+    if (pidH < 0) {
+        if (errno == ECHILD) {
+          printf("Child does not exist\n");
+        }
+        else if (errno == EINVAL){
+          printf("Bad argument passed to waitpid\n");
+        } else {
+            printf("Wtf\n");
+      }
+    }
+    job* tempJob = getJob(pidH);
+    if(WIFSTOPPED(child_status)){
+        strcpy(tempJob->status, "Stopped");
+        if(sig == SIGINT){
+            tempJob = getJobFG(tempJob->jobID);
+            kill(tempJob->processID, SIGTERM);
+            printf("Hello\n");
+        }    
+    }
+    /**
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGCHLD);
+    sigprocmask(SIG_UNBLOCK,&set,NULL);
+    */
+    printf("Sushi\n");
+}
+
+void tstp_handler(int sig){
+    int child_status = NULL;
+    pidH = waitpid(-1, &child_status, WUNTRACED);
+    printf("Child status is %d\n pidH is %d\n", child_status, pidH);
+    if (pidH < 0) {
+        if (errno == ECHILD) {
+          printf("Child does not exist\n");
+        }
+        else if (errno == EINVAL){
+          printf("Bad argument passed to waitpid\n");
+        } else {
+            printf("Wtf\n");
+      }
+    }
+    job* tempJob = getJob(pidH);
+    if(WIFSTOPPED(child_status)){
+        strcpy(tempJob->status, "Stopped");
+        if(sig == SIGTSTP){
+            tempJob = getJobFG(tempJob->jobID);
+            addJobBG(&tempJob);
+            deleteJobFG(tempJob->jobID);
+        }
+    }
+    /**
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGCHLD);
+    sigprocmask(SIG_UNBLOCK,&set,NULL);
+*/
+
+    printf("Pizza\n");
 }
 
 void fg(char* jobMoveID){
@@ -337,14 +401,17 @@ void fg(char* jobMoveID){
         printf("Pickles\n");
         deleteJobBG(jobID);
         printf("Fries\n");
-        printf("Job id is now %d and process id is %d\n", newJob->jobID, newJob->processID);
+         printf("Job id is %d process id is %d status is %s cmdline is %s bdIndicator is %d\n", newJob->jobID, newJob->processID, newJob->status, newJob->cmdline, newJob->bgIndicator);
+        //printf("Job id is now %d and process id is %d\n", newJob->jobID, newJob->processID);
         //strcpy(newJob->status, "Running");
-        if(jobBG == NULL){
+        /**if(jobBG == NULL){
             printf("Mustard\n");
         } else {
             printf("process Id is %d job id is %d job status is %s job cmd is %s\n", jobBG->processID, jobBG->jobID, jobBG->status, jobBG->cmdline);
         }
+        */
         if(strcmp(newJob->status, "Stopped") == 0){
+            printf("hey hey hey\n");
             if(kill(newJob->processID, SIGCONT) == -1){
                 //are we supposed to abort if this fails and reverse all our actions?
                 log_job_fg_fail(newJob->processID, newJob->cmdline);
@@ -377,7 +444,7 @@ void bg(char* jobID){
     }
     job* bgJob = getJobBG(jobNum);
     if(bgJob!= NULL){
-        if(!strcmp(bgJob->status, "Running")){
+        if(strcmp(bgJob->status, "Stopped") == 0){
             if(kill(bgJob->processID, SIGCONT) == -1){
                 //should the process be stopped if signal fails to send?
                 strcpy(bgJob->status, "Stopped");
@@ -465,23 +532,35 @@ int main(){
     int fdWrite;
     int fdApp;
 
-    sigset_t mask, prev_mask, block_mask;
-    //sigemptyset(&block_mask);
+    sigset_t mask, prev_mask, block_mask, child_mask;
+    sigemptyset(&prev_mask);
+    sigemptyset(&block_mask);
+    sigemptyset(&child_mask);
+    sigaddset(&block_mask, SIGCHLD);
+    sigaddset(&child_mask, SIGINT);
+    sigaddset(&child_mask, SIGTSTP);
+    
+
     struct sigaction sig_child;
+    struct sigaction sig_int;
+    struct sigaction sig_tstp;
+
     sig_child.sa_handler = child_handler; 
+    sig_int.sa_handler = int_handler;
+    sig_tstp.sa_handler = tstp_handler;
+
     sig_child.sa_flags = 0;
-    //sigaddset(&block_mask, SIGCHLD);
-    //sigaddset(&block_mask, SIGTSTP);
-    //sigaddset(&block_mask, SIGINT);
-    //sigaddset(&block_mask, SIGINT);
-    //sigaddset(&block_mask, SIGTSTP);
-    //sigaddset(&block_mask, SIGCONT);
-    //sigaddset(&block_mask, SIGTERM);
+    sig_int.sa_flags = 0;
+    sig_tstp.sa_flags = 0;
+
     //what other sigs to add to block
-    sig_child.sa_mask = block_mask;
+    //sig_child.sa_mask = child_mask;
+    //sig_tstp.sa_mask = block_mask;
+    //sig_int.sa_mask = block_mask;
+
     sigaction(SIGCHLD, &sig_child, NULL);
-    //sigaction(SIGTSTP, &sig_child, NULL);
-    //sigaction(SIGINT, &sig_child, NULL);
+    sigaction(SIGTSTP, &sig_tstp, NULL);
+    sigaction(SIGINT, &sig_int, NULL);
     //sigaction(SIGTERM, &sig_child, NULL);
     //int child_status = NULL;
     int pid;
@@ -539,7 +618,7 @@ int main(){
                         token = strtok(NULL, " \n");
                     }
                     printf("Token is %s", token);
-                    if((fdWrite = open(token, O_CREAT|O_WRONLY, 0600)) < 0){
+                    if((fdWrite = open(token, O_CREAT|O_WRONLY|O_TRUNC, 0600)) < 0){
                         log_file_open_error(token);
                     }
                 } else if(strstr(token, ">>") != NULL){
@@ -613,8 +692,8 @@ int main(){
                     }
                     sigprocmask(SIG_SETMASK, &prev_mask, NULL);
                     if(bgIndicator == 0){
-                        pid = 0;
-                        while(!pid){
+                        pidH = 0;
+                        while(!pidH){
                             sigsuspend(&prev_mask);
                         }
                     }
