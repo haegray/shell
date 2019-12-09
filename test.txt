@@ -1,4 +1,4 @@
-total 188
+total 204
 -rw-r--r--. 1 hgray6 itestudent     0 Dec  2 21:13 bgIndicator
 -rw-r--r--. 1 hgray6 itestudent     0 Dec  3 16:15 initial
 -rw-r--r--. 1 hgray6 itestudent     0 Dec  2 21:13 jobID
@@ -7,14 +7,15 @@ total 188
 -rw-r--r--. 1 hgray6 itestudent 16112 Nov 21 13:25 logging.o
 -rw-r--r--. 1 hgray6 itestudent   301 Nov 18 16:12 Makefile
 -rw-r--r--. 1 hgray6 itestudent     0 Dec  2 21:13 nextJob
+-rw-------. 1 hgray6 itestudent    15 Dec  6 21:24 output_test.txt
 -rw-------. 1 hgray6 itestudent  1111 Dec  6 01:24 output.txt
 -rw-r--r--. 1 hgray6 itestudent     0 Dec  2 21:13 processID
--rwxr-xr-x. 1 hgray6 itestudent 37184 Dec  6 21:22 shell
+-rwxr-xr-x. 1 hgray6 itestudent 37632 Dec  8 21:14 shell
 -rw-r--r--. 1 hgray6 itestudent 18204 Dec  3 17:09 shell_backup.c
--rw-r--r--. 1 hgray6 itestudent 23920 Dec  6 21:22 shell.c
+-rw-r--r--. 1 hgray6 itestudent 28461 Dec  8 21:18 shell.c
 -rw-r--r--. 1 hgray6 itestudent   463 Nov 20 15:14 shell.h
 -rw-r--r--. 1 hgray6 itestudent 19062 Dec  2 21:05 shell_new.c
--rw-r--r--. 1 hgray6 itestudent 32768 Dec  6 21:22 shell.o
+-rw-r--r--. 1 hgray6 itestudent 37528 Dec  8 21:14 shell.o
 -rw-r--r--. 1 hgray6 itestudent  6918 Nov 26 21:24 shell_old.c
 -rw-r--r--. 1 hgray6 itestudent   665 Nov 20 14:52 sigaction_example.c
--rw-------. 1 hgray6 itestudent     0 Dec  6 21:23 test.txt
+-rw-------. 1 hgray6 itestudent     0 Dec  8 21:20 test.txt
